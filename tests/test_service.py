@@ -11,6 +11,7 @@ Valide le scénario complet présenté sur la diapositive du professeur :
 import sys
 import tempfile
 import shutil
+import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -19,111 +20,85 @@ from service import BibliothequeService
 from regles import LivreDejaEmprunteError, LivreIntrouvableError, EmpruntIntrouvableError
 
 
-def test_scenario_diaporama_complet():
-    """Reproduit fidèlement la session console réelle du professeur."""
-    temp_dir = tempfile.mkdtemp()
-    try:
-        db_path = str(Path(temp_dir) / "test_service.db")
-        depot = DepotSqlite(db_path=db_path)
-        service = BibliothequeService(depot=depot)
+class TestService(unittest.TestCase):
 
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.db_path = str(Path(self.temp_dir) / "test_service.db")
+        self.depot = DepotSqlite(db_path=self.db_path)
+        self.service = BibliothequeService(depot=self.depot)
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_scenario_diaporama_complet(self):
+        """Reproduit fidèlement la session console réelle du professeur."""
         # 1. Recherche : Kourouma -> doit retourner L004 et L002
-        resultats = service.rechercher_livres("Kourouma")
-        assert len(resultats) == 2
-        assert any(l.code == "L004" for l in resultats)
-        assert any(l.code == "L002" for l in resultats)
+        resultats = self.service.rechercher_livres("Kourouma")
+        self.assertEqual(len(resultats), 2)
+        self.assertTrue(any(l.code == "L004" for l in resultats))
+        self.assertTrue(any(l.code == "L002" for l in resultats))
 
         # 2. Emprunt : L002 par E2026-001 à la date 01/10/2026 -> retour prévu 15/10/2026
-        emprunt = service.emprunter_livre(
+        emprunt = self.service.emprunter_livre(
             code_livre="L002",
             matricule="E2026-001",
             date_emprunt="2026-10-01"
         )
-        assert emprunt.code_livre == "L002"
-        assert emprunt.matricule == "E2026-001"
-        assert emprunt.date_retour_prevue == "2026-10-15"
+        self.assertEqual(emprunt.code_livre, "L002")
+        self.assertEqual(emprunt.matricule, "E2026-001")
+        self.assertEqual(emprunt.date_retour_prevue, "2026-10-15")
 
         # 3. Deuxième tentative : L002 par E2026-002 -> doit lever LivreDejaEmprunteError
-        try:
-            service.emprunter_livre(
+        with self.assertRaises(LivreDejaEmprunteError) as ctx:
+            self.service.emprunter_livre(
                 code_livre="L002",
                 matricule="E2026-002",
                 date_emprunt="2026-10-02"
             )
-            assert False, "Aurait dû lever LivreDejaEmprunteError"
-        except LivreDejaEmprunteError as e:
-            assert "Impossible : Le livre « Les Soleils des indépendances » est déjà emprunté" in str(e)
+        self.assertIn(
+            "Impossible : Le livre « Les Soleils des indépendances » est déjà emprunté",
+            str(ctx.exception)
+        )
 
         # 4. Rendre le livre L002
-        rendu = service.rendre_livre("L002", date_retour_effective="2026-10-10")
-        assert rendu is True
+        rendu = self.service.rendre_livre("L002", date_retour_effective="2026-10-10")
+        self.assertTrue(rendu)
 
         # 5. Maintenant que le livre est rendu, E2026-002 peut enfin l'emprunter !
-        emprunt_2 = service.emprunter_livre(
+        emprunt_2 = self.service.emprunter_livre(
             code_livre="L002",
             matricule="E2026-002",
             date_emprunt="2026-10-11"
         )
-        assert emprunt_2.code_livre == "L002"
-        assert emprunt_2.matricule == "E2026-002"
+        self.assertEqual(emprunt_2.code_livre, "L002")
+        self.assertEqual(emprunt_2.matricule, "E2026-002")
 
-    finally:
-        shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-def test_service_gestion_retards():
-    """Vérifie la détection des emprunts en retard par le service."""
-    temp_dir = tempfile.mkdtemp()
-    try:
-        db_path = str(Path(temp_dir) / "test_retards.db")
-        depot = DepotSqlite(db_path=db_path)
-        service = BibliothequeService(depot=depot)
-
+    def test_service_gestion_retards(self):
+        """Vérifie la détection des emprunts en retard par le service."""
         # Emprunt le 01/10/2026 (retour prévu le 15/10/2026)
-        service.emprunter_livre("L001", "E2026-099", date_emprunt="2026-10-01")
+        self.service.emprunter_livre("L001", "E2026-099", date_emprunt="2026-10-01")
 
         # Au 15/10/2026 : aucun retard
-        retards_j0 = service.lister_retards(date_reference="2026-10-15")
-        assert len(retards_j0) == 0
+        retards_j0 = self.service.lister_retards(date_reference="2026-10-15")
+        self.assertEqual(len(retards_j0), 0)
 
         # Au 20/10/2026 : 1 retard détecté de 5 jours
-        retards_j5 = service.lister_retards(date_reference="2026-10-20")
-        assert len(retards_j5) == 1
-        assert retards_j5[0]["emprunt"].code_livre == "L001"
-        assert retards_j5[0]["jours_retard"] == 5
+        retards_j5 = self.service.lister_retards(date_reference="2026-10-20")
+        self.assertEqual(len(retards_j5), 1)
+        self.assertEqual(retards_j5[0]["emprunt"].code_livre, "L001")
+        self.assertEqual(retards_j5[0]["jours_retard"], 5)
 
-    finally:
-        shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-def test_erreurs_livre_et_emprunt_inconnus():
-    """Vérifie le déclenchement des erreurs pour les codes inconnus."""
-    temp_dir = tempfile.mkdtemp()
-    try:
-        db_path = str(Path(temp_dir) / "test_err.db")
-        depot = DepotSqlite(db_path=db_path)
-        service = BibliothequeService(depot=depot)
-
+    def test_erreurs_livre_et_emprunt_inconnus(self):
+        """Vérifie le déclenchement des erreurs pour les codes inconnus."""
         # Livre inexistant
-        try:
-            service.emprunter_livre("L999", "E2026-001")
-            assert False
-        except LivreIntrouvableError:
-            pass
+        with self.assertRaises(LivreIntrouvableError):
+            self.service.emprunter_livre("L999", "E2026-001")
 
         # Rendre un livre qui n'est pas emprunté
-        try:
-            service.rendre_livre("L001")
-            assert False
-        except EmpruntIntrouvableError:
-            pass
-
-    finally:
-        shutil.rmtree(temp_dir, ignore_errors=True)
+        with self.assertRaises(EmpruntIntrouvableError):
+            self.service.rendre_livre("L001")
 
 
 if __name__ == "__main__":
-    test_scenario_diaporama_complet()
-    test_service_gestion_retards()
-    test_erreurs_livre_et_emprunt_inconnus()
-    print("OK - test_service.py réussi !")
+    unittest.main()
