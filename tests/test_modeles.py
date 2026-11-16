@@ -3,6 +3,10 @@ Tests unitaires pour modeles.py.
 Vérifie la création des objets Livre et Emprunt ainsi que leurs méthodes.
 """
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from datetime import date
 from modeles import Livre, Emprunt
 

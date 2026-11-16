@@ -3,6 +3,10 @@ Tests unitaires pour regles.py.
 Vérifie le calcul des dates de retour, la détection des retards et le blocage si déjà emprunté.
 """
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from datetime import date
 from modeles import Livre, Emprunt
 from regles import (
