@@ -1,6 +1,6 @@
 """
 Tests unitaires pour modeles.py.
-Vérifie la création des objets Livre et Emprunt ainsi que leurs méthodes.
+Vérifie la création des objets Livre, Lecteur et Emprunt ainsi que leurs méthodes.
 """
 
 import sys
@@ -9,7 +9,7 @@ from datetime import date
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from modeles import Livre, Emprunt
+from modeles import Livre, Lecteur, Emprunt
 
 
 class TestModeles(unittest.TestCase):
@@ -23,6 +23,14 @@ class TestModeles(unittest.TestCase):
         self.assertEqual(livre.annee, 2000)
         self.assertTrue(livre.disponible)
         self.assertEqual(str(livre), "L004  Allah n'est pas obligé - Ahmadou Kourouma (2000)")
+
+    def test_creation_lecteur(self):
+        """Vérifie la création d'un étudiant lecteur."""
+        lecteur = Lecteur("E2026-001", "KOUASSI", "Jean-Marc", "0701020304", "Génie Logiciel")
+        self.assertEqual(lecteur.matricule, "E2026-001")
+        self.assertEqual(lecteur.nom_complet, "KOUASSI Jean-Marc")
+        self.assertIn("Jean-Marc", str(lecteur))
+        self.assertIn("Génie Logiciel", str(lecteur))
 
     def test_creation_emprunt(self):
         """Vérifie la création d'un emprunt en cours."""

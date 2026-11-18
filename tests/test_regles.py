@@ -1,6 +1,7 @@
 """
 Tests unitaires pour regles.py.
-Vérifie le calcul des dates de retour, la détection des retards et le blocage si déjà emprunté.
+Vérifie le calcul des dates de retour, la détection des retards, le blocage si déjà emprunté,
+ainsi que les règles de gestion professionnelles (quotas, non-doublon, blocage retardataire).
 """
 
 import sys
@@ -15,7 +16,13 @@ from regles import (
     est_en_retard,
     calculer_jours_retard,
     verifier_livre_disponible,
+    verifier_quota_lecteur,
+    verifier_lecteur_sans_retard,
+    verifier_non_doublon_emprunt,
     LivreDejaEmprunteError,
+    QuotaEmpruntsDepasseError,
+    LecteurAvecRetardBloqueError,
+    LivreDejaEnCoursParLecteurError,
 )
 
 
@@ -48,7 +55,7 @@ class TestRegles(unittest.TestCase):
 
     def test_livre_deja_emprunte_leve_exception(self):
         """Vérifie qu'emprunter un livre déjà emprunté lève le message exact de la console."""
-        livre = Livre("L002", "Les Soleils des indépendances", "Ahmadou Kourouma", 1968)
+        livre = Livre("L002", "Les Soleils des indépendances", "Ahmadou Kourouma", 1968, nb_exemplaires=1)
         emprunt_actif = Emprunt("L002", "E2026-001", "2026-10-01", "2026-10-15")
 
         with self.assertRaises(LivreDejaEmprunteError) as ctx:
@@ -58,6 +65,29 @@ class TestRegles(unittest.TestCase):
             "Impossible : Le livre « Les Soleils des indépendances » est déjà emprunté",
             str(ctx.exception)
         )
+
+    def test_quota_emprunts_depasse(self):
+        """Vérifie que la règle du quota maximal (ex: 3 livres) bloque le 4ème emprunt."""
+        emprunts_actifs = [
+            Emprunt("L001", "E2026-001", "2026-10-01", "2026-10-15"),
+            Emprunt("L003", "E2026-001", "2026-10-01", "2026-10-15"),
+            Emprunt("L004", "E2026-001", "2026-10-01", "2026-10-15"),
+        ]
+        with self.assertRaises(QuotaEmpruntsDepasseError):
+            verifier_quota_lecteur("E2026-001", emprunts_actifs, max_autorise=3)
+
+    def test_lecteur_avec_retard_bloque(self):
+        """Vérifie qu'un étudiant ayant un prêt en retard ne peut pas emprunter."""
+        emprunt_en_retard = Emprunt("L001", "E2026-001", "2026-10-01", "2026-10-15")
+        with self.assertRaises(LecteurAvecRetardBloqueError):
+            verifier_lecteur_sans_retard("E2026-001", [emprunt_en_retard], date_ref="2026-10-20")
+
+    def test_doublon_emprunt_meme_livre(self):
+        """Vérifie qu'un étudiant ne peut pas emprunter 2 fois le même livre en même temps."""
+        livre = Livre("L001", "Climbié", "Bernard Dadié", 1956, nb_exemplaires=3)
+        emprunts_actifs = [Emprunt("L001", "E2026-001", "2026-10-01", "2026-10-15")]
+        with self.assertRaises(LivreDejaEnCoursParLecteurError):
+            verifier_non_doublon_emprunt(livre, emprunts_actifs)
 
 
 if __name__ == "__main__":

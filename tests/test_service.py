@@ -6,6 +6,7 @@ Valide le scénario complet présenté sur la diapositive du professeur :
 3. Blocage si réemprunt (L002 par E2026-002) avec le message exact
 4. Retour du livre et restitution de sa disponibilité
 5. Détection des retards
+Ainsi que les fonctionnalités professionnelles de SIGB (lecteurs, quotas, stats, suppression sécurisée).
 """
 
 import sys
@@ -17,7 +18,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from depot_sqlite import DepotSqlite
 from service import BibliothequeService
-from regles import LivreDejaEmprunteError, LivreIntrouvableError, EmpruntIntrouvableError
+from regles import (
+    LivreDejaEmprunteError,
+    LivreIntrouvableError,
+    EmpruntIntrouvableError,
+    QuotaEmpruntsDepasseError,
+    SuppressionImpossibleError,
+)
 
 
 class TestService(unittest.TestCase):
@@ -49,7 +56,7 @@ class TestService(unittest.TestCase):
         self.assertEqual(emprunt.matricule, "E2026-001")
         self.assertEqual(emprunt.date_retour_prevue, "2026-10-15")
 
-        # 3. Deuxième tentative : L002 par E2026-002 -> doit lever LivreDejaEmprunteError
+        # 3. Deuxième tentative : L002 par E2026-002 -> doit lever LivreDejaEmprunteError (1 seul exemplaire)
         with self.assertRaises(LivreDejaEmprunteError) as ctx:
             self.service.emprunter_livre(
                 code_livre="L002",
@@ -98,6 +105,52 @@ class TestService(unittest.TestCase):
         # Rendre un livre qui n'est pas emprunté
         with self.assertRaises(EmpruntIntrouvableError):
             self.service.rendre_livre("L001")
+
+    def test_quota_emprunts_service(self):
+        """Vérifie que le service applique le quota de 3 livres maximum par étudiant."""
+        # Emprunter 3 livres distincts
+        self.service.emprunter_livre("L001", "E2026-050", date_emprunt="2026-10-01")
+        self.service.emprunter_livre("L003", "E2026-050", date_emprunt="2026-10-01")
+        self.service.emprunter_livre("L004", "E2026-050", date_emprunt="2026-10-01")
+
+        # Tentative du 4ème emprunt -> QuotaEmpruntsDepasseError
+        with self.assertRaises(QuotaEmpruntsDepasseError):
+            self.service.emprunter_livre("L005", "E2026-050", date_emprunt="2026-10-01")
+
+    def test_gestion_lecteurs_service(self):
+        """Vérifie l'inscription, la recherche et l'obtention d'un lecteur."""
+        lecteur = self.service.inscrire_lecteur("E2026-999", "KONE", "Bakary", "0700000000", "Data Science")
+        self.assertEqual(lecteur.matricule, "E2026-999")
+
+        trouve = self.service.obtenir_lecteur("E2026-999")
+        self.assertEqual(trouve.nom, "KONE")
+
+        resultats = self.service.rechercher_lecteurs("Bakary")
+        self.assertEqual(len(resultats), 1)
+
+    def test_protection_suppression_si_historique(self):
+        """Vérifie qu'un livre ou lecteur avec historique ne peut pas être supprimé."""
+        self.service.emprunter_livre("L001", "E2026-001")
+
+        # Tentative de suppression du livre L001
+        with self.assertRaises(SuppressionImpossibleError):
+            self.service.supprimer_livre("L001")
+
+        # Tentative de suppression du lecteur E2026-001
+        with self.assertRaises(SuppressionImpossibleError):
+            self.service.supprimer_lecteur("E2026-001")
+
+    def test_statistiques_et_export_csv(self):
+        """Vérifie le calcul des statistiques et l'export CSV."""
+        stats = self.service.obtenir_statistiques()
+        self.assertGreaterEqual(stats["nb_titres"], 25)
+        self.assertGreaterEqual(stats["nb_exemplaires_total"], 25)
+
+        # Emprunter un livre avec retard pour tester l'export CSV
+        self.service.emprunter_livre("L001", "E2026-001", date_emprunt="2026-01-01")
+        csv_file = str(Path(self.temp_dir) / "test_retards.csv")
+        chemin = self.service.exporter_retards_csv(csv_file)
+        self.assertTrue(Path(chemin).is_file())
 
 
 if __name__ == "__main__":

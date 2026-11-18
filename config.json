@@ -1,0 +1,6 @@
+{
+  "duree_emprunt_jours": 14,
+  "max_livres_par_lecteur": 3,
+  "bloquer_si_retard_actif": true,
+  "nom_etablissement": "Institut Ivoirien de Technologie (IIT)"
+}
