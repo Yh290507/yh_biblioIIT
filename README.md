@@ -85,7 +85,7 @@ Le projet adopte une **Architecture en Couches (Layered / Clean Architecture)** 
 - **Fichier de base** : `biblio.db` (généré automatiquement à la racine).
 - **Intégrité référentielle** : Activation explicite des clés étrangères via `PRAGMA foreign_keys = ON;`.
 - **Initialisation automatique** : Crée les tables `livres` et `emprunts` dès le premier lancement.
-- **Fonds initial pré-chargé** : Insère les ouvrages littéraires de référence du cours (*Ahmadou Kourouma*, *Bernard Dadié*, *Cheikh Hamidou Kane*).
+- **Fonds initial pré-chargé** : Insère 25 ouvrages de référence de la littérature africaine et ivoirienne (*Ahmadou Kourouma*, *Bernard Dadié*, *Cheikh Hamidou Kane*, *Chinua Achebe*, *Mariama Bâ*, *Camara Laye*, *Amadou Hampâté Bâ*, etc.).
 - **Méthodes optimisées** : Recherche insensible à la casse (`LOWER() LIKE %...%`), transactions protégées avec gestionnaires de contexte (`with conn:`).
 
 ### D. `service.py` — Logique applicative

@@ -9,12 +9,33 @@ from modeles import Livre, Emprunt
 
 DB_NAME = "biblio.db"
 
-# Livres de référence de la bibliothèque (conformes au slide du cours)
+# Livres de référence de la bibliothèque (fonds de littérature africaine)
 LIVRES_INITIAUX = [
     ("L001", "Climbié", "Bernard Dadié", 1956),
     ("L002", "Les Soleils des indépendances", "Ahmadou Kourouma", 1968),
     ("L003", "L'Aventure ambiguë", "Cheikh Hamidou Kane", 1961),
     ("L004", "Allah n'est pas obligé", "Ahmadou Kourouma", 2000),
+    ("L005", "Le monde s'effondre", "Chinua Achebe", 1958),
+    ("L006", "Une si longue lettre", "Mariama Bâ", 1979),
+    ("L007", "L'Enfant noir", "Camara Laye", 1953),
+    ("L008", "L'Étrange Destin de Wangrin", "Amadou Hampâté Bâ", 1973),
+    ("L009", "Sous l'orage", "Seydou Badian", 1957),
+    ("L010", "Rebelle", "Fatou Keïta", 1998),
+    ("L011", "Les Frasques d'Ébinto", "Amadou Koné", 1975),
+    ("L012", "Le Pagne noir", "Bernard Dadié", 1955),
+    ("L013", "Un Nègre à Paris", "Bernard Dadié", 1959),
+    ("L014", "Le Pauvre Christ de Bomba", "Mongo Beti", 1956),
+    ("L015", "Ville cruelle", "Eza Boto", 1954),
+    ("L016", "Cahier d'un retour au pays natal", "Aimé Césaire", 1939),
+    ("L017", "Batouala", "René Maran", 1921),
+    ("L018", "La Rue Cases-Nègres", "Joseph Zobel", 1950),
+    ("L019", "Cœur de caniche", "Isaïe Biton Koulibaly", 1989),
+    ("L020", "Ah ! Les femmes...", "Isaïe Biton Koulibaly", 1999),
+    ("L021", "Le Baobab fou", "Ken Bugul", 1982),
+    ("L022", "Les Crapauds-broussards", "Tierno Monénembo", 1979),
+    ("L023", "Verre Cassé", "Alain Mabanckou", 2005),
+    ("L024", "Petit Pays", "Gaël Faye", 2016),
+    ("L025", "La Plus Secrète Mémoire des hommes", "Mohamed Mbougar Sarr", 2021),
 ]
 
 
@@ -58,13 +79,11 @@ class DepotSqlite:
                 );
             """)
 
-            # Insérer les livres initiaux si la table est vide
-            cur.execute("SELECT COUNT(*) FROM livres;")
-            if cur.fetchone()[0] == 0:
-                cur.executemany(
-                    "INSERT INTO livres (code, titre, auteur, annee, disponible) VALUES (?, ?, ?, ?, 1);",
-                    LIVRES_INITIAUX
-                )
+            # Insérer les livres initiaux du fonds documentaire (sans écraser les existants)
+            cur.executemany(
+                "INSERT OR IGNORE INTO livres (code, titre, auteur, annee, disponible) VALUES (?, ?, ?, ?, 1);",
+                LIVRES_INITIAUX
+            )
             conn.commit()
 
     def rechercher_livres(self, mot_cle: str) -> List[Livre]:

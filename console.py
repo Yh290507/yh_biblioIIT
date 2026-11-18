@@ -41,16 +41,16 @@ class ApplicationConsole:
         """Affiche le menu des actions disponibles."""
         print()
         print("┌── MENU PRINCIPAL ────────────────────────────────────────────┐")
-        print("│  [1]  Rechercher un livre      [2]  Emprunter un ouvrage │")
-        print("│  [3]   Restituer un livre       [4]   Suivi des retards   │")
-        print("│  [0]  Quitter l'application                                │")
+        print("│  [1]  Rechercher un livre      [2]  Emprunter un ouvrage     │")
+        print("│  [3]   Restituer un livre       [4]   Suivi des retards      │")
+        print("│  [0]  Quitter l'application                                  │")
         print("└──────────────────────────────────────────────────────────────┘")
 
     def action_rechercher(self):
         """Option 1 : Recherche d'un livre par mot-clé."""
         print()
         print("──  RECHERCHE D'OUVRAGES DANS LE CATALOGUE ──────────────────")
-        mot_cle = input(" Saisissez un titre, un auteur ou un mot-clé (ex: Kourouma) : ").strip()
+        mot_cle = input(" Saisissez un titre, auteur ou mot-clé (Entrée pour tout afficher) : ").strip()
 
         livres = self.service.rechercher_livres(mot_cle)
 
@@ -59,13 +59,13 @@ class ApplicationConsole:
             return
 
         print(f"\n {len(livres)} ouvrage(s) trouvé(s) :\n")
-        print(f"  {'CODE':<6} {'STATUT':<14} {'TITRE':<35} {'AUTEUR (ANNÉE)'}")
-        print("  " + "─" * 70)
+        print(f"  {'CODE':<6} {'STATUT':<14} {'TITRE':<38} {'AUTEUR (ANNÉE)'}")
+        print("  " + "─" * 78)
 
         for l in livres:
             statut = "[DISPONIBLE]" if l.disponible else "[EMPRUNTÉ]"
-            print(f"  {l.code:<6} {statut:<14} {l.titre:<35} {l.auteur} ({l.annee})")
-        print("  " + "─" * 70)
+            print(f"  {l.code:<6} {statut:<14} {l.titre:<38} {l.auteur} ({l.annee})")
+        print("  " + "─" * 78)
 
     def action_emprunter(self):
         """Option 2 : Enregistrement d'un nouvel emprunt."""
